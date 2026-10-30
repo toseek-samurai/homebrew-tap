@@ -12,6 +12,11 @@ class ShinContextEngine < Formula
   depends_on "openssl@3"
   depends_on "sqlite"
 
+  on_macos do
+    # Homebrew otherwise prefers older CLT over a selected newer Xcode SDK.
+    depends_on xcode: ["26.0", :build] if MacOS::CLT.version < "26.0"
+  end
+
   resource "shin_httplib" do
     url "https://github.com/yhirose/cpp-httplib/archive/refs/tags/v0.54.1.tar.gz"
     sha256 "7310f5312e1423830d649b38ed028e9db86303a979ccbfdbd1c4b1574f422dfb"
