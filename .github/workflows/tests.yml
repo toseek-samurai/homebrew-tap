@@ -1,0 +1,76 @@
+name: Formula installation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: formula-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  installation:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+      HOMEBREW_NO_INSTALL_CLEANUP: "1"
+      HOMEBREW_NO_AUTOREMOVE: "1"
+      HOMEBREW_NO_ENV_HINTS: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: Homebrew/actions/setup-homebrew@c262868c096d909fc278daa87ed9772967331ea3
+        with:
+          stable: true
+      - name: Trust the reviewed formula
+        run: |
+          brew tap toseek-samurai/tap
+          brew trust --formula toseek-samurai/tap/shin-context-engine
+      - name: Recipe style and audit
+        run: |
+          brew style Formula/shin-context-engine.rb
+          brew audit --strict toseek-samurai/tap/shin-context-engine
+      - name: Install complete package
+        run: |
+          brew install --build-from-source toseek-samurai/tap/shin-context-engine
+          brew linkage --test toseek-samurai/tap/shin-context-engine
+          brew test toseek-samurai/tap/shin-context-engine
+          codesign --verify --deep --strict "$(brew --prefix shin-context-engine)/Shin Monitor.app"
+      - name: Seed isolated project and client settings
+        run: |
+          python3 -B tests/installation_smoke.py --prefix "$(brew --prefix shin-context-engine)" \
+            --workspace "$RUNNER_TEMP/shin-installation" --phase seed
+      - name: Reinstall and verify preserved state
+        run: |
+          brew reinstall --build-from-source toseek-samurai/tap/shin-context-engine
+          python3 -B tests/installation_smoke.py --prefix "$(brew --prefix shin-context-engine)" \
+            --workspace "$RUNNER_TEMP/shin-installation" --phase verify
+      - name: Uninstall preserves data
+        run: |
+          brew uninstall toseek-samurai/tap/shin-context-engine
+          python3 -B - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import sqlite3
+          root = Path(os.environ['RUNNER_TEMP']) / 'shin-installation'
+          baseline = json.loads((root / 'baseline.json').read_text())
+          assert hashlib.sha256((root / 'sample project/sample.cpp').read_bytes()).hexdigest() == baseline['source_sha256']
+          assert hashlib.sha256((root / 'user/codex.toml').read_bytes()).hexdigest() == baseline['client_sha256']
+          history = root / 'state/service/history/telemetry.sqlite'
+          assert history.stat().st_ino == baseline['history_inode']
+          with sqlite3.connect(f'file:{history}?mode=ro', uri=True) as db:
+              assert db.execute('PRAGMA quick_check').fetchone()[0] == 'ok'
+          PY
