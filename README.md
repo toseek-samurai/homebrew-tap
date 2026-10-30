@@ -14,6 +14,9 @@ shin-monitor
 
 Requires macOS 15 or newer. The package compiles pinned sources locally, so the
 first installation takes several minutes and needs Homebrew's build tools.
+Use current Apple Command Line Tools (Xcode 26 or newer) with C++20 thread support.
+The full Xcode application is optional when the selected Command Line Tools provide
+that support; update macOS first if the required tools are unavailable.
 Apple Developer ID is not required for this local build. There are no prebuilt
 bottles in this first tap. No Python or Node runtime is needed afterward.
 Homebrew may ask you to trust the formula from this third-party tap.

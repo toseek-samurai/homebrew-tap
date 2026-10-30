@@ -30,6 +30,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+      - name: Select the qualified Apple toolchain
+        run: |
+          sudo xcode-select --switch /Applications/Xcode_26.3.app/Contents/Developer
+          xcodebuild -version
+          xcrun --sdk macosx --show-sdk-path
       - uses: Homebrew/actions/setup-homebrew@c262868c096d909fc278daa87ed9772967331ea3
         with:
           stable: true

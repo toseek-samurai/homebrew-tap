@@ -43,6 +43,20 @@ class ShinContextEngine < Formula
   end
 
   def install
+    probe = buildpath/"shin-toolchain-check.cpp"
+    probe.write <<~CPP
+      #include <stop_token>
+      #include <thread>
+      int main() { std::jthread worker([](std::stop_token) {}); }
+    CPP
+    unless quiet_system(ENV.cxx, "-std=c++20", probe, "-o", buildpath/"shin-toolchain-check")
+      odie <<~EOS
+        Shin needs C++20 std::jthread and std::stop_token.
+        Update Apple's Command Line Tools to Xcode 26 or newer, or select a current Xcode toolchain.
+        On macOS 15, install current system updates first if those tools are unavailable.
+        Apple Developer Program membership is not required.
+      EOS
+    end
     args = std_cmake_args + %W[
       -DBUILD_TESTING=OFF
       -DSHIN_OBSERVER_SOURCE_DISCOVERY=ON
