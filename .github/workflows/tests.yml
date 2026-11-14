@@ -20,7 +20,7 @@ jobs:
       matrix:
         os: [macos-15, macos-15-intel]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 40
+    timeout-minutes: ${{ matrix.os == 'macos-15-intel' && 60 || 40 }}
     env:
       HOMEBREW_NO_AUTO_UPDATE: "1"
       HOMEBREW_NO_INSTALL_CLEANUP: "1"
@@ -50,6 +50,16 @@ jobs:
         run: |
           brew style Formula/shin-context-engine.rb
           brew audit --strict toseek-samurai/tap/shin-context-engine
+      - name: Remove the Intel runner's stale OpenSSL link
+        if: matrix.os == 'macos-15-intel'
+        run: |
+          prefix="$(brew --prefix)"
+          link="$prefix/bin/openssl"
+          case "$(readlink "$link" || true)" in
+            "$prefix/opt/openssl@1.1/bin/openssl"|../opt/openssl@1.1/bin/openssl)
+              rm "$link"
+              ;;
+          esac
       - name: Install complete package
         run: |
           brew install toseek-samurai/tap/shin-context-engine
