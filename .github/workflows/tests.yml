@@ -38,9 +38,13 @@ jobs:
       - uses: Homebrew/actions/setup-homebrew@c262868c096d909fc278daa87ed9772967331ea3
         with:
           stable: true
-      - name: Trust the reviewed formula
+      - name: Load the checked-out formula
         run: |
           brew tap toseek-samurai/tap
+          recipe="$(brew --repository toseek-samurai/tap)/Formula/shin-context-engine.rb"
+          if ! [[ Formula/shin-context-engine.rb -ef "$recipe" ]]; then
+            install -m 0644 Formula/shin-context-engine.rb "$recipe"
+          fi
           brew trust --formula toseek-samurai/tap/shin-context-engine
       - name: Recipe style and audit
         run: |
@@ -48,7 +52,7 @@ jobs:
           brew audit --strict toseek-samurai/tap/shin-context-engine
       - name: Install complete package
         run: |
-          brew install --build-from-source toseek-samurai/tap/shin-context-engine
+          brew install toseek-samurai/tap/shin-context-engine
           brew linkage --test toseek-samurai/tap/shin-context-engine
           brew test toseek-samurai/tap/shin-context-engine
           codesign --verify --deep --strict "$(brew --prefix shin-context-engine)/Shin Monitor.app"
@@ -58,7 +62,7 @@ jobs:
             --workspace "$RUNNER_TEMP/shin-installation" --phase seed
       - name: Reinstall and verify preserved state
         run: |
-          brew reinstall --build-from-source toseek-samurai/tap/shin-context-engine
+          brew reinstall toseek-samurai/tap/shin-context-engine
           python3 -B tests/installation_smoke.py --prefix "$(brew --prefix shin-context-engine)" \
             --workspace "$RUNNER_TEMP/shin-installation" --phase verify
       - name: Uninstall preserves data

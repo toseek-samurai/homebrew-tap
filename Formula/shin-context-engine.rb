@@ -1,9 +1,9 @@
 class ShinContextEngine < Formula
   desc "Local context engine for coding agents with MCP, desktop and terminal monitors"
   homepage "https://github.com/toseek-samurai/shin-context-engine"
-  url "https://github.com/toseek-samurai/shin-context-engine/archive/refs/tags/v2.0.5-dev.70.tar.gz"
-  version "2.0.5-dev.70"
-  sha256 "e113ab4a12acbc62a2e1509e5349d554714a07f75a74861f519d84d656a37292"
+  url "https://github.com/toseek-samurai/shin-context-engine/archive/refs/tags/v2.0.5-dev.111.tar.gz"
+  version "2.0.5-dev.111"
+  sha256 "72bd6db768f4bfb402d85a4cb8601f2592b28f7fce241d8fbbbaa9817e9c2623"
   license "Apache-2.0"
 
   depends_on "cmake" => :build
@@ -45,6 +45,16 @@ class ShinContextEngine < Formula
   resource "shin_imgui" do
     url "https://github.com/ocornut/imgui/archive/refs/tags/v1.93.0.tar.gz"
     sha256 "f7bf6bc76e5d79d40d751096663e6c5d18daf08129dd52e7f7b09e4251c8eeee"
+  end
+
+  resource "shin_re2" do
+    url "https://github.com/google/re2/archive/refs/tags/2025-11-05.tar.gz"
+    sha256 "87f6029d2f6de8aa023654240a03ada90e876ce9a4676e258dd01ea4c26ffd67"
+  end
+
+  resource "shin_abseil" do
+    url "https://github.com/abseil/abseil-cpp/archive/refs/tags/20250814.1.tar.gz"
+    sha256 "1692f77d1739bacf3f94337188b78583cf09bab7e420d2dc6c5605a4f86785a1"
   end
 
   def install
@@ -105,7 +115,8 @@ class ShinContextEngine < Formula
       For login startup, stop the session service and use Homebrew:
         shin-ce service-stop
         brew services start toseek-samurai/tap/shin-context-engine
-      Update with brew upgrade, then restart the service and persistent MCP clients.
+      Quit Monitor and TUI before brew upgrade, then restart the service.
+      Reconnect an older MCP integration if it reports a version mismatch.
       Homebrew owns this package; the native Shin installer/updater is disabled.
     EOS
   end
@@ -128,6 +139,10 @@ class ShinContextEngine < Formula
     assert_path_exists bin/"shin-context"
     assert_path_exists bin/"shin-monitor"
     assert_path_exists prefix/"Shin Monitor.app"
+    %w[shin-context shin-observer].each do |component|
+      assert_path_exists share/component/"licenses/re2/LICENSE"
+      assert_path_exists share/component/"licenses/abseil/LICENSE"
+    end
     refute_path_exists bin/"shin-updater"
   end
 end

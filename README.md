@@ -3,6 +3,7 @@
 The project-owned tap for the complete macOS preview of
 [Shin Context Engine](https://github.com/toseek-samurai/shin-context-engine).
 Includes Core, Observer, CLI, MCP, usage collector, Sand TUI and Shin Monitor.
+The formula builds [preview dev.111](https://github.com/toseek-samurai/shin-context-engine/releases/tag/v2.0.5-dev.111).
 
 ```sh
 brew install toseek-samurai/tap/shin-context-engine
@@ -19,9 +20,8 @@ The full Xcode application is optional when the selected Command Line Tools prov
 that support; update macOS first if the required tools are unavailable.
 If Homebrew asks for full Xcode because older CLT are installed, updating the CLT
 to version 26 or newer also satisfies the build requirements.
-Apple Developer ID is not required for this local build. There are no prebuilt
-bottles in this first tap. No Python or Node runtime is needed afterward.
-Homebrew may ask you to trust the formula from this third-party tap.
+The local build needs no Apple Developer ID. The tap supplies source archives
+with pinned checksums. No Python or Node runtime is needed afterward.
 
 `shin-monitor` opens the tray application; `shin-ce stats` opens the terminal
 monitor. Both support English and Russian. Monitor's project setup detects
@@ -52,8 +52,9 @@ brew upgrade toseek-samurai/tap/shin-context-engine
 
 Restart a login service with `brew services restart
 toseek-samurai/tap/shin-context-engine`, or a session service with
-`shin-ce service-start`. Open `shin-monitor` again and reconnect persistent MCP
-clients. Their saved executable paths use the stable Homebrew opt prefix.
+`shin-ce service-start`. Open `shin-monitor` again. Reconnect an older MCP
+integration if it reports a version mismatch. Saved executable paths use the
+stable Homebrew opt prefix.
 
 Homebrew owns the package. Shin's native installer and Updater are disabled in
 this build; Monitor and TUI show the appropriate Homebrew command instead.
