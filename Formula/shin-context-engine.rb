@@ -1,9 +1,9 @@
 class ShinContextEngine < Formula
   desc "Local context engine for coding agents with MCP, desktop and terminal monitors"
   homepage "https://github.com/toseek-samurai/shin-context-engine"
-  url "https://github.com/toseek-samurai/shin-context-engine/archive/refs/tags/v2.0.5-dev.111.tar.gz"
-  version "2.0.5-dev.111"
-  sha256 "72bd6db768f4bfb402d85a4cb8601f2592b28f7fce241d8fbbbaa9817e9c2623"
+  url "https://github.com/toseek-samurai/shin-context-engine/archive/refs/tags/v2.0.5-dev.116.tar.gz"
+  version "2.0.5-dev.116"
+  sha256 "092e0030b4e6aa88e137d071085c03301c202baaba0751e886d1d8da7458fad9"
   license "Apache-2.0"
 
   depends_on "cmake" => :build
@@ -17,9 +17,39 @@ class ShinContextEngine < Formula
     depends_on xcode: ["26.0", :build] if MacOS::CLT.version < "26.0"
   end
 
+  resource "shin_abseil" do
+    url "https://github.com/abseil/abseil-cpp/archive/refs/tags/20250814.1.tar.gz"
+    sha256 "1692f77d1739bacf3f94337188b78583cf09bab7e420d2dc6c5605a4f86785a1"
+  end
+
+  resource "shin_ftxui" do
+    url "https://github.com/ArthurSonzogni/FTXUI/archive/refs/tags/v7.0.3.tar.gz"
+    sha256 "e7c62ffe19009759821b4f0f8df7f2a6fb83784c3a9f1477d81f56d3ee723c88"
+  end
+
   resource "shin_httplib" do
     url "https://github.com/yhirose/cpp-httplib/archive/refs/tags/v0.54.1.tar.gz"
     sha256 "7310f5312e1423830d649b38ed028e9db86303a979ccbfdbd1c4b1574f422dfb"
+  end
+
+  resource "shin_imgui" do
+    url "https://github.com/ocornut/imgui/archive/refs/tags/v1.93.0.tar.gz"
+    sha256 "f7bf6bc76e5d79d40d751096663e6c5d18daf08129dd52e7f7b09e4251c8eeee"
+  end
+
+  resource "shin_libuv" do
+    url "https://github.com/libuv/libuv/archive/refs/tags/v1.53.0.tar.gz"
+    sha256 "279f3f67a24bb9921fe999ca6cd5e332fade8d515873ef9ba054b70e70a31d9e"
+  end
+
+  resource "shin_mcp" do
+    url "https://github.com/jesspig/modelcontextprotocol-cpp-sdk/archive/2304f1bb43e37034f5abf51fd9bd44f555966942.tar.gz"
+    sha256 "66370718e998119f8bc17c1ac00c8e67d3e1b36ca8d88b84ef3d5aecbe468553"
+  end
+
+  resource "shin_re2" do
+    url "https://github.com/google/re2/archive/refs/tags/2025-11-05.tar.gz"
+    sha256 "87f6029d2f6de8aa023654240a03ada90e876ce9a4676e258dd01ea4c26ffd67"
   end
 
   resource "shin_toml" do
@@ -30,31 +60,6 @@ class ShinContextEngine < Formula
   resource "shin_yaml" do
     url "https://github.com/yaml/libyaml/archive/refs/tags/0.2.5.tar.gz"
     sha256 "fa240dbf262be053f3898006d502d514936c818e422afdcf33921c63bed9bf2e"
-  end
-
-  resource "shin_ftxui" do
-    url "https://github.com/ArthurSonzogni/FTXUI/archive/refs/tags/v7.0.3.tar.gz"
-    sha256 "e7c62ffe19009759821b4f0f8df7f2a6fb83784c3a9f1477d81f56d3ee723c88"
-  end
-
-  resource "shin_mcp" do
-    url "https://github.com/jesspig/modelcontextprotocol-cpp-sdk/archive/2304f1bb43e37034f5abf51fd9bd44f555966942.tar.gz"
-    sha256 "66370718e998119f8bc17c1ac00c8e67d3e1b36ca8d88b84ef3d5aecbe468553"
-  end
-
-  resource "shin_imgui" do
-    url "https://github.com/ocornut/imgui/archive/refs/tags/v1.93.0.tar.gz"
-    sha256 "f7bf6bc76e5d79d40d751096663e6c5d18daf08129dd52e7f7b09e4251c8eeee"
-  end
-
-  resource "shin_re2" do
-    url "https://github.com/google/re2/archive/refs/tags/2025-11-05.tar.gz"
-    sha256 "87f6029d2f6de8aa023654240a03ada90e876ce9a4676e258dd01ea4c26ffd67"
-  end
-
-  resource "shin_abseil" do
-    url "https://github.com/abseil/abseil-cpp/archive/refs/tags/20250814.1.tar.gz"
-    sha256 "1692f77d1739bacf3f94337188b78583cf09bab7e420d2dc6c5605a4f86785a1"
   end
 
   def install
@@ -143,6 +148,8 @@ class ShinContextEngine < Formula
       assert_path_exists share/component/"licenses/re2/LICENSE"
       assert_path_exists share/component/"licenses/abseil/LICENSE"
     end
+    assert_path_exists share/"shin-observer/licenses/libuv/LICENSE"
+    assert_path_exists share/"shin-observer/licenses/libuv/LICENSE-extra"
     refute_path_exists bin/"shin-updater"
   end
 end
