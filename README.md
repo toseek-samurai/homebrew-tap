@@ -3,7 +3,8 @@
 The project-owned tap for the complete macOS preview of
 [Shin Context Engine](https://github.com/toseek-samurai/shin-context-engine).
 Includes Core, Observer, CLI, MCP, usage collector, Sand TUI and Shin Monitor.
-The formula builds [preview dev.111](https://github.com/toseek-samurai/shin-context-engine/releases/tag/v2.0.5-dev.111).
+The formula pins a published preview. `brew info toseek-samurai/tap/shin-context-engine`
+shows the currently selected version.
 
 ```sh
 brew install toseek-samurai/tap/shin-context-engine
@@ -85,19 +86,29 @@ for the full lifecycle and ownership rules.
 
 ## Maintaining the recipe
 
-1. Wait for a qualified upstream release to finish publication. Do not point the
-   formula at a pending tag, moving branch or a locally built binary.
-2. Update the source URL, version and SHA-256 together. Keep dependency resources
-   aligned with the upstream CMake declarations and pin every archive checksum.
-3. Run `brew style Formula/shin-context-engine.rb`, `brew audit --strict
-   toseek-samurai/tap/shin-context-engine`, a source installation and `brew test`.
-4. Use `tests/installation_smoke.py --prefix "$(brew --prefix shin-context-engine)"
-   --workspace /new/disposable/directory --phase seed`, reinstall the package,
-   then run the same script with `--phase verify`. It checks query/MCP, EN/RU TUI,
-   package update ownership and preservation of client settings, source and history.
-   Its fixtures and service are isolated from existing projects.
-5. Check uninstall preservation. Submit the recipe change and require the macOS
-   installation workflow to pass before merging it.
+The [Update preview formula workflow](https://github.com/toseek-samurai/homebrew-tap/actions/workflows/sync-preview.yml)
+checks upstream hourly. Maintainers can also run it from **main** with an optional
+preview tag. Normal releases need no manual Ruby edits or additional personal token.
+
+The workflow selects a public preview only after its macOS qualification receipt
+and complete platform assets are present. It checks the immutable source commit,
+derives the source checksum and dependency resources from that tag's CMake files,
+and tests the exact candidate formula on Apple Silicon and Intel. The existing
+installation workflow covers style, audit, linkage, query/MCP, EN/RU terminal
+startup, reinstall and preservation of source, client settings and history after
+uninstall. Its projects, service and data are disposable.
+
+Only after both platforms pass does the tap's own `GITHUB_TOKEN` advance the
+formula on `main`. The publish step rechecks source qualification and the tap base;
+a concurrent maintainer change is preserved and requires a fresh run. A pending
+upstream tag, failed installation or malformed dependency pin leaves the current
+formula intact. No token is copied from a developer's machine or stored as a new secret.
+
+Version and resource updates are automatic; changes to the installer, toolchain
+requirements or a new dependency declaration layout still need maintainer review.
+Do not point the recipe at a moving branch or a locally built binary. For manual
+changes, run `brew style`, `brew audit --strict`, `brew test` and the complete
+installation workflow before merging.
 
 The CI workflow tests Apple Silicon and Intel from source. It does not publish
 bottles, create release assets or change production client settings.

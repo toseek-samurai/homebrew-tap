@@ -1,0 +1,111 @@
+name: Update preview formula
+run-name: Synchronize qualified Shin preview
+
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/**', 'tools/**', 'tests/test_sync_preview.py']
+  pull_request:
+    paths: ['.github/workflows/**', 'tools/**', 'tests/test_sync_preview.py']
+  schedule:
+    - cron: '47 * * * *'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Optional vN.N.N-dev.N tag; blank selects the newest qualified macOS preview'
+        type: string
+        required: false
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: sync-preview-formula
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Select published source and prepare pinned formula
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      changed: ${{ steps.candidate.outputs.changed }}
+      version: ${{ steps.candidate.outputs.version }}
+      recipe_sha256: ${{ steps.candidate.outputs.formula_sha256 }}
+      base: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Check qualification and preservation guards
+        run: python3 -B tests/test_sync_preview.py
+      - name: Prepare from qualified upstream source
+        id: candidate
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIEW_TAG: ${{ inputs.tag }}
+        run: |
+          python3 -B tools/sync_preview.py prepare --candidate "$RUNNER_TEMP/shin-recipe" --tag "$PREVIEW_TAG"
+      - name: Preserve the exact candidate for both installation checks
+        if: steps.candidate.outputs.changed == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: shin-preview-recipe
+          path: ${{ runner.temp }}/shin-recipe
+          retention-days: 7
+          if-no-files-found: error
+      - name: Explain unchanged formula
+        if: steps.candidate.outputs.changed != 'true'
+        run: echo 'No newer published, macOS-qualified preview. The current formula is preserved.' >> "$GITHUB_STEP_SUMMARY"
+
+  installation:
+    name: Qualify the candidate on Apple Silicon and Intel
+    needs: prepare
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && needs.prepare.outputs.changed == 'true'
+    uses: ./.github/workflows/tests.yml
+    with:
+      recipe_artifact: shin-preview-recipe
+      recipe_sha256: ${{ needs.prepare.outputs.recipe_sha256 }}
+
+  publish:
+    name: Advance tap after both installation gates
+    needs: [prepare, installation]
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && needs.prepare.outputs.changed == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ needs.prepare.outputs.base }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: shin-preview-recipe
+          path: ${{ runner.temp }}/shin-recipe
+      - name: Recheck immutable source and unchanged tap base
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RECIPE_SHA256: ${{ needs.prepare.outputs.recipe_sha256 }}
+          TESTED_BASE: ${{ needs.prepare.outputs.base }}
+        run: |
+          git fetch origin main
+          python3 -B tools/sync_preview.py apply --candidate "$RUNNER_TEMP/shin-recipe" \
+            --sha256 "$RECIPE_SHA256" --base "$TESTED_BASE"
+      - name: Commit and publish the qualified formula
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIEW_VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          gh auth setup-git
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- Formula/shin-context-engine.rb .github/upstream-preview.json
+          git commit -m "chore(brew): update Shin to $PREVIEW_VERSION"
+          git push origin HEAD:refs/heads/main
+          echo "Homebrew formula advanced to $PREVIEW_VERSION after Apple Silicon and Intel qualification." >> "$GITHUB_STEP_SUMMARY"
