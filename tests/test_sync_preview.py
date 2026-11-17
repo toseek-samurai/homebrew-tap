@@ -61,18 +61,23 @@ class PreviewTests(unittest.TestCase):
                            'shin-updater-v1-macos-arm64.zip', 'shin-updater-v1-macos-arm64.zip.sha256', 'install.sh')}}
         self.release = {'tag_name': self.tag, 'draft': False, 'prerelease': True,
                         'assets': [{'name': n} for n in [*self.marker['assets'], 'shin-preview-macos.json']]}
+        self.sqlite = b'pinned SQLite fixture bytes'
         self.archive = self.make_archive()
 
-    def make_archive(self, libuv=True, invalid_pin=False):
+    def make_archive(self, libuv=True, invalid_pin=False, sqlite_url='https://www.sqlite.org/2026/sqlite-amalgamation-3540100.zip'):
         files = {'VERSION': self.marker['core_version'], 'observer/VERSION': self.tag[1:],
                  'docs/machine/shin-development-v1.json': json.dumps({'developmentLane': {
                      'coreVersion': self.marker['core_version'], 'observerSourceVersion': self.tag[1:]}})}
         for path, names in sync.CMAKE.items():
+            if path.endswith('SQLite.cmake'):
+                continue
             if not libuv and path.endswith('Coordinator.cmake'):
                 continue
             files[path] = ''.join(f'FetchContent_Declare({name}\n'
                                  f' URL https://codeload.github.com/example/{name}/tar.gz/refs/tags/v1\n'
                                  ' URL_HASH SHA256=' + ('bad' if invalid_pin else 'c' * 64) + ')\n' for name in names)
+        files['shared/cmake/SQLite.cmake'] = (f'FetchContent_Declare(shin_sqlite\n URL {sqlite_url}\n'
+            f' URL_HASH SHA3_256={hashlib.sha3_256(self.sqlite).hexdigest()})\n')
         data = io.BytesIO()
         with tarfile.open(fileobj=data, mode='w:gz') as archive:
             for name, value in files.items():
@@ -90,6 +95,9 @@ class PreviewTests(unittest.TestCase):
             value = {'object': {'type': 'tag', 'sha': 'd' * 40}}
         elif '/git/tags/' in url:
             value = {'object': {'type': 'commit', 'sha': self.sha}}
+        elif url == 'https://www.sqlite.org/2026/sqlite-amalgamation-3540100.zip':
+            self.assertLessEqual(len(self.sqlite), limit)
+            return self.sqlite
         elif url.endswith('.tar.gz'):
             return self.archive
         else:
@@ -103,12 +111,34 @@ class PreviewTests(unittest.TestCase):
         text = recipe.decode()
         self.assertEqual(sync.version_of(text), self.tag[1:])
         self.assertEqual(metadata['source_sha256'], hashlib.sha256(self.archive).hexdigest())
-        self.assertEqual(set(metadata['resources']), sync.KNOWN)
+        self.assertEqual(set(metadata['resources']), sync.KNOWN - sync.RETIRED)
         self.assertIn('LICENSE-extra', text)
-        self.assertIn('  depends_on "sqlite"', text)
+        self.assertNotIn('  depends_on "sqlite"', text)
+        self.assertNotIn('resource "shin_httplib"', text)
+        self.assertEqual(metadata['resources']['shin_sqlite']['sha256'], hashlib.sha256(self.sqlite).hexdigest())
         self.assertIn(RECIPE[RECIPE.index('  def install'):RECIPE.index('  test do')], text)
         self.assertIn('refute_path_exists bin/"shin-updater"', text)
         self.assertEqual((self.root / 'Formula/shin-context-engine.rb').read_text(), RECIPE)
+
+    def test_sqlite_sha3_failure_preserves_current_recipe(self):
+        self.sqlite += b'tampered'
+        output = self.root / 'candidate'
+        with self.assertRaisesRegex(ValueError, 'SQLite.*digest'):
+            sync.prepare(self.root, output, fetch=self.fetch)
+        self.assertFalse(output.exists())
+        self.assertEqual((self.root / 'Formula/shin-context-engine.rb').read_text(), RECIPE)
+
+    def test_sqlite_download_must_use_the_official_pinned_archive(self):
+        self.archive = self.make_archive(sqlite_url='https://example.invalid/sqlite.zip')
+        output = self.root / 'candidate'
+        with self.assertRaisesRegex(ValueError, 'SQLite'):
+            sync.prepare(self.root, output, fetch=self.fetch)
+        self.assertFalse(output.exists())
+
+    def test_unknown_maintained_resource_is_not_removed(self):
+        recipe = RECIPE.replace('shin_httplib', 'owner_custom')
+        with self.assertRaisesRegex(ValueError, 'unknown maintained resource'):
+            sync.render(recipe, '1.0.0-dev.2', 'f' * 64, {})
 
     def test_pending_platform_or_draft_does_not_advance_recipe(self):
         for change in ({'draft': True}, {'assets': []}, {'prerelease': False}):

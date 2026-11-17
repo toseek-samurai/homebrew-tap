@@ -106,6 +106,10 @@ formula intact. No token is copied from a developer's machine or stored as a new
 
 Version and resource updates are automatic; changes to the installer, toolchain
 requirements or a new dependency declaration layout still need maintainer review.
+SQLite is staged from the official amalgamation archive pinned by the source.
+Synchronization verifies its SHA3-256 before deriving Homebrew's SHA-256; the
+formula does not use system SQLite. The retired Server's `shin_httplib` resource
+is removed from new recipes; unknown maintained resources still require review.
 Do not point the recipe at a moving branch or a locally built binary. For manual
 changes, run `brew style`, `brew audit --strict`, `brew test` and the complete
 installation workflow before merging.

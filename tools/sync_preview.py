@@ -19,15 +19,16 @@ API = 'https://api.github.com/repos/' + REPO
 PREVIEW = r'(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)-dev\.(?:0|[1-9][0-9]*)'
 HEX = r'[0-9a-f]{64}'
 CMAKE = {
-    'shared/cmake/Http.cmake': {'shin_httplib'},
     'observer/cmake/ClientConfig.cmake': {'shin_toml', 'shin_yaml'},
     'shared/cmake/Ftxui.cmake': {'shin_ftxui'},
     'shared/cmake/Mcp.cmake': {'shin_mcp'},
     'observer/tray/CMakeLists.txt': {'shin_imgui'},
     'shared/cmake/SecretScanner.cmake': {'shin_re2', 'shin_abseil'},
     'shared/cmake/Coordinator.cmake': {'shin_libuv'},
+    'shared/cmake/SQLite.cmake': {'shin_sqlite'},
 }
-KNOWN = set().union(*CMAKE.values())
+RETIRED = {'shin_httplib'}
+KNOWN = set().union(*CMAKE.values()) | RETIRED
 FILES = {'shin-context-engine.rb', 'upstream-preview.json'}
 
 
@@ -136,7 +137,7 @@ def source_files(data):
     return files
 
 
-def resources(files):
+def resources(files, fetch=download):
     pins = {}
     for path, required in CMAKE.items():
         if path not in files:
@@ -145,12 +146,23 @@ def resources(files):
         found = set()
         for name, body in re.findall(r'FetchContent_Declare\s*\(\s*(shin_[a-z0-9_]+)\b(.*?)\)', text, re.S | re.I):
             url = re.search(r'\bURL\s+(\S+)', body)
-            sha = re.search(r'\bURL_HASH\s+SHA256=(' + HEX + r')\b', body)
+            sha = re.search(r'\bURL_HASH\s+(SHA256|SHA3_256)=(' + HEX + r')\b', body)
             require(url is not None and sha is not None and name not in pins, 'Dependency pin is missing or ambiguous')
+            if name == 'shin_sqlite':
+                require(sha[1] == 'SHA3_256' and re.fullmatch(
+                    r'https://www.sqlite.org/[0-9]{4}/sqlite-amalgamation-[0-9]{7}\.zip', url[1]),
+                    'SQLite must use its official pinned SHA3-256 archive')
+                data = fetch(url[1], 16 * 1024 * 1024)
+                require(len(data) <= 16 * 1024 * 1024 and hashlib.sha3_256(data).hexdigest() == sha[2],
+                        'SQLite archive digest differs from the qualified source pin')
+                pins[name] = {'url': url[1], 'sha256': hashlib.sha256(data).hexdigest()}
+                found.add(name)
+                continue
+            require(sha[1] == 'SHA256', 'GitHub dependencies require an immutable SHA-256 pin')
             match = re.fullmatch(r'https://codeload.github.com/([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)/tar.gz/'
                                  r'(refs/tags/[A-Za-z0-9_.-]+|[0-9a-f]{40})', url[1])
             require(match is not None, 'Dependency must use a literal immutable GitHub reference')
-            pins[name] = {'url': f'https://github.com/{match[1]}/archive/{match[2]}.tar.gz', 'sha256': sha[1]}
+            pins[name] = {'url': f'https://github.com/{match[1]}/archive/{match[2]}.tar.gz', 'sha256': sha[2]}
             found.add(name)
         require(required <= found, 'Required dependency declaration is missing')
     return pins
@@ -170,6 +182,10 @@ def render(recipe, version, sha, pins):
     blocks = ''.join(f'  resource "{name}" do\n    url "{pin["url"]}"\n'
                      f'    sha256 "{pin["sha256"]}"\n  end\n\n' for name, pin in sorted(pins.items()))
     recipe = recipe[:start] + blocks + recipe[end:]
+    if 'shin_sqlite' in pins:
+        dependency = '  depends_on "sqlite"\n'
+        require(recipe.count(dependency) <= 1, 'System SQLite dependency is ambiguous')
+        recipe = recipe.replace(dependency, '')
     notices = ''.join(f'    assert_path_exists share/"shin-observer/licenses/libuv/{name}"\n'
                       for name in ('LICENSE', 'LICENSE-extra'))
     recipe = recipe.replace(notices, '')
@@ -204,7 +220,7 @@ def prepare(root, output, tag='', fetch=download):
                 'Source component versions differ from the qualification receipt')
         # Check again after the archive download, before deriving an installable recipe.
         require(qualified(release, fetch) == marker, 'Qualification changed during preparation')
-        pins = resources(files)
+        pins = resources(files, fetch)
         sha = hashlib.sha256(data).hexdigest()
         candidate = render(recipe, version, sha, pins).encode()
         metadata = {'schema_version': 'shin.homebrew-preview.v1', 'repository': REPO, 'tag': 'v' + version,
