@@ -1,16 +1,15 @@
 class ShinContextEngine < Formula
   desc "Local context engine for coding agents with MCP, desktop and terminal monitors"
   homepage "https://github.com/toseek-samurai/shin-context-engine"
-  url "https://github.com/toseek-samurai/shin-context-engine/archive/refs/tags/v2.0.5-dev.116.tar.gz"
-  version "2.0.5-dev.116"
-  sha256 "092e0030b4e6aa88e137d071085c03301c202baaba0751e886d1d8da7458fad9"
+  url "https://github.com/toseek-samurai/shin-context-engine/archive/refs/tags/v2.0.5-dev.129.tar.gz"
+  version "2.0.5-dev.129"
+  sha256 "ca54fad4e833d0ea566ed02ae6e2e5b6282bd49e3f378444f09f6a0a00a6372e"
   license "Apache-2.0"
 
   depends_on "cmake" => :build
   depends_on "ninja" => :build
   depends_on macos: :sequoia
   depends_on "openssl@3"
-  depends_on "sqlite"
 
   on_macos do
     # Homebrew otherwise prefers older CLT over a selected newer Xcode SDK.
@@ -18,18 +17,13 @@ class ShinContextEngine < Formula
   end
 
   resource "shin_abseil" do
-    url "https://github.com/abseil/abseil-cpp/archive/refs/tags/20250814.1.tar.gz"
-    sha256 "1692f77d1739bacf3f94337188b78583cf09bab7e420d2dc6c5605a4f86785a1"
+    url "https://github.com/abseil/abseil-cpp/archive/refs/tags/20260817.0.tar.gz"
+    sha256 "f7e05179df39c45434cad433f5783840bb3788ef322976f9138bc6b72b3a107d"
   end
 
   resource "shin_ftxui" do
     url "https://github.com/ArthurSonzogni/FTXUI/archive/refs/tags/v7.0.3.tar.gz"
     sha256 "e7c62ffe19009759821b4f0f8df7f2a6fb83784c3a9f1477d81f56d3ee723c88"
-  end
-
-  resource "shin_httplib" do
-    url "https://github.com/yhirose/cpp-httplib/archive/refs/tags/v0.54.1.tar.gz"
-    sha256 "7310f5312e1423830d649b38ed028e9db86303a979ccbfdbd1c4b1574f422dfb"
   end
 
   resource "shin_imgui" do
@@ -50,6 +44,11 @@ class ShinContextEngine < Formula
   resource "shin_re2" do
     url "https://github.com/google/re2/archive/refs/tags/2025-11-05.tar.gz"
     sha256 "87f6029d2f6de8aa023654240a03ada90e876ce9a4676e258dd01ea4c26ffd67"
+  end
+
+  resource "shin_sqlite" do
+    url "https://www.sqlite.org/2026/sqlite-amalgamation-3540100.zip"
+    sha256 "0a9c8e34352dad46006aa82836d5383bff9dc6bc9ce5a60553c05aa30e6ad1f9"
   end
 
   resource "shin_toml" do
