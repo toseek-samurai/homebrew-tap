@@ -95,6 +95,23 @@ jobs:
               rm "$link"
               ;;
           esac
+      - name: Prepare Intel certificate dependencies
+        if: matrix.os == 'macos-15-intel'
+        shell: bash
+        run: |
+          install_dependency() {
+            local formula="$1"
+            if brew install "$formula"; then
+              return
+            fi
+            # Homebrew can leave an installed keg after a failed post-install.
+            # Retry the package's own step only for the version it just selected.
+            brew info --json=v2 "$formula" |
+              jq -e '.formulae[0] | .versions.stable as $current | any(.installed[]; .version == $current)'
+            brew postinstall --verbose "$formula"
+          }
+          install_dependency ca-certificates
+          install_dependency openssl@3
       - name: Install complete package
         run: brew install toseek-samurai/tap/shin-context-engine
       - name: Verify linkage, formula smoke test and Monitor signature
