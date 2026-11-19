@@ -49,13 +49,6 @@ jobs:
         with:
           name: ${{ inputs.recipe_artifact }}
           path: ${{ runner.temp }}/shin-recipe
-      - name: Verify and load the exact candidate
-        if: inputs.recipe_artifact != ''
-        env:
-          RECIPE_SHA256: ${{ inputs.recipe_sha256 }}
-        run: |
-          python3 -B tools/sync_preview.py overlay --candidate "$RUNNER_TEMP/shin-recipe" \
-            --sha256 "$RECIPE_SHA256"
       - name: Select the qualified Apple toolchain
         run: |
           sudo xcode-select --switch /Applications/Xcode_26.3.app/Contents/Developer
@@ -64,14 +57,30 @@ jobs:
       - uses: Homebrew/actions/setup-homebrew@c262868c096d909fc278daa87ed9772967331ea3
         with:
           stable: true
-      - name: Load the checked-out formula
+      - name: Load the formula after Homebrew resets the tap checkout
+        env:
+          RECIPE_ARTIFACT: ${{ inputs.recipe_artifact }}
+          RECIPE_SHA256: ${{ inputs.recipe_sha256 }}
         run: |
           brew tap toseek-samurai/tap
           recipe="$(brew --repository toseek-samurai/tap)/Formula/shin-context-engine.rb"
+          if [[ -n "$RECIPE_ARTIFACT" ]]; then
+            candidate="$RUNNER_TEMP/shin-recipe"
+            python3 -B tools/sync_preview.py overlay --candidate "$candidate" --sha256 "$RECIPE_SHA256"
+          fi
           if ! [[ Formula/shin-context-engine.rb -ef "$recipe" ]]; then
             install -m 0644 Formula/shin-context-engine.rb "$recipe"
           fi
           brew trust --formula toseek-samurai/tap/shin-context-engine
+          if [[ -n "$RECIPE_ARTIFACT" ]]; then
+            printf '%s  %s\n' "$RECIPE_SHA256" "$recipe" | shasum -a 256 -c
+            expected_version="$(jq -er '.tag | ltrimstr("v")' "$candidate/upstream-preview.json")"
+            expected_core="$(jq -er '.core_version' "$candidate/upstream-preview.json")"
+            brew info --json=v2 toseek-samurai/tap/shin-context-engine |
+              jq -e --arg version "$expected_version" '.formulae[0].versions.stable == $version'
+            echo "SHIN_EXPECTED_VERSION=$expected_version" >> "$GITHUB_ENV"
+            echo "SHIN_EXPECTED_CORE_VERSION=$expected_core" >> "$GITHUB_ENV"
+          fi
       - name: Recipe style and audit
         run: |
           brew style Formula/shin-context-engine.rb
@@ -87,8 +96,9 @@ jobs:
               ;;
           esac
       - name: Install complete package
+        run: brew install toseek-samurai/tap/shin-context-engine
+      - name: Verify linkage, formula smoke test and Monitor signature
         run: |
-          brew install toseek-samurai/tap/shin-context-engine
           brew linkage --test toseek-samurai/tap/shin-context-engine
           brew test toseek-samurai/tap/shin-context-engine
           codesign --verify --deep --strict "$(brew --prefix shin-context-engine)/Shin Monitor.app"

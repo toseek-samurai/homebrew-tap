@@ -20,10 +20,18 @@ parser.add_argument('--workspace', type=Path, required=True)
 parser.add_argument('--phase', choices=('seed', 'verify'), required=True)
 args = parser.parse_args()
 base = args.workspace.resolve()
+ce = args.prefix/'bin/shin-ce'
+expected_version = os.environ.get('SHIN_EXPECTED_VERSION')
+expected_core = os.environ.get('SHIN_EXPECTED_CORE_VERSION')
+if expected_version or expected_core:
+    installed = json.loads(subprocess.check_output([str(ce), '--version'], timeout=30))
+    actual = installed.get('version'), installed.get('core_version')
+    expected = expected_version, expected_core
+    assert actual == expected, f'Installed Shin versions {actual} differ from the qualified candidate {expected}'
+    print(f'Verified installed Shin {actual[0]} with Core {actual[1]}')
 if args.phase == 'seed':
     base.mkdir(mode=0o700)
 user, project, home = base/'user', base/'sample project', base/'state'
-ce = args.prefix/'bin/shin-ce'
 if args.phase == 'seed':
     user.mkdir(mode=0o700); project.mkdir(mode=0o700)
     (project/'sample.cpp').write_text('int readLimit() { return 17; }\n')
