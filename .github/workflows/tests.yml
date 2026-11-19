@@ -85,33 +85,22 @@ jobs:
         run: |
           brew style Formula/shin-context-engine.rb
           brew audit --strict toseek-samurai/tap/shin-context-engine
-      - name: Remove the Intel runner's stale OpenSSL link
+      - name: Prepare the Intel runner's Homebrew prefix
         if: matrix.os == 'macos-15-intel'
         run: |
           prefix="$(brew --prefix)"
+          # Homebrew 7.0.15 cannot start post-install in a root-owned prefix
+          # without libexec. Match the directory created by its installer.
+          # https://github.com/Homebrew/brew/issues/24685
+          if [[ "$prefix" == /usr/local && ! -e "$prefix/libexec" && ! -L "$prefix/libexec" ]]; then
+            sudo install -d -m 0755 -o "$(id -un)" -g "$(id -gn)" "$prefix/libexec"
+          fi
           link="$prefix/bin/openssl"
           case "$(readlink "$link" || true)" in
             "$prefix/opt/openssl@1.1/bin/openssl"|../opt/openssl@1.1/bin/openssl)
               rm "$link"
               ;;
           esac
-      - name: Prepare Intel certificate dependencies
-        if: matrix.os == 'macos-15-intel'
-        shell: bash
-        run: |
-          install_dependency() {
-            local formula="$1"
-            if brew install "$formula"; then
-              return
-            fi
-            # Homebrew can leave an installed keg after a failed post-install.
-            # Retry the package's own step only for the version it just selected.
-            brew info --json=v2 "$formula" |
-              jq -e '.formulae[0] | .versions.stable as $current | any(.installed[]; .version == $current)'
-            brew postinstall --verbose "$formula"
-          }
-          install_dependency ca-certificates
-          install_dependency openssl@3
       - name: Install complete package
         run: brew install toseek-samurai/tap/shin-context-engine
       - name: Verify linkage, formula smoke test and Monitor signature
