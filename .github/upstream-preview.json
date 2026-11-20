@@ -1,13 +1,13 @@
 {
   "schema_version": "shin.homebrew-preview.v1",
   "repository": "toseek-samurai/shin-context-engine",
-  "tag": "v2.0.5-dev.134",
-  "source_sha": "b889ac6d81c21eaf07647bb07fd3a25c39f71c17",
-  "source_sha256": "f34f15b3d208870ecfbe5c46562aa4044f09d56a10710cb22144a9846b200cc2",
+  "tag": "v2.0.5-dev.135",
+  "source_sha": "55e231dddadacfc6329420b06bca23f2ab9fa132",
+  "source_sha256": "992e9fc790a676a083fb928e30ba80bd2e589daefae6349a3fe9ac2a0919a197",
   "core_version": "2.0.5-dev.37",
-  "macos_run_id": 44593757671,
+  "macos_run_id": 44710468611,
   "macos_attempt": 1,
-  "formula_sha256": "6d281a5645fce008416df9a8099f37f7db1e49d5be8fb3a52b6764fd0792819b",
+  "formula_sha256": "670f1e5ff3878f358a7702b03999757a52a5ae23940bab93fe2930721645a4c6",
   "resources": {
     "shin_toml": {
       "url": "https://github.com/marzer/tomlplusplus/archive/refs/tags/v3.4.0.tar.gz",
