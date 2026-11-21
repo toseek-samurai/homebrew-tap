@@ -1,9 +1,9 @@
 class ShinContextEngine < Formula
   desc "Local context engine for coding agents with MCP, desktop and terminal monitors"
   homepage "https://github.com/toseek-samurai/shin-context-engine"
-  url "https://github.com/toseek-samurai/shin-context-engine/archive/refs/tags/v2.0.5-dev.135.tar.gz"
-  version "2.0.5-dev.135"
-  sha256 "992e9fc790a676a083fb928e30ba80bd2e589daefae6349a3fe9ac2a0919a197"
+  url "https://github.com/toseek-samurai/shin-context-engine/archive/refs/tags/v2.0.5-dev.138.tar.gz"
+  version "2.0.5-dev.138"
+  sha256 "f1293103536b50e9fd6c8b8c5b1e701f2b36782af3cdc27b0b8cd2d29b791b81"
   license "Apache-2.0"
 
   depends_on "cmake" => :build
